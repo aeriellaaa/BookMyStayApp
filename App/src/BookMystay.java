@@ -1,134 +1,195 @@
 import java.util.*;
 
-// Reservation represents a booking request
+// Reservation (Booking Request)
 class Reservation {
     private String guestName;
     private String roomType;
-    private int numberOfRooms;
+    private int roomsRequested;
 
-    public Reservation(String guestName, String roomType, int numberOfRooms) {
+    public Reservation(String guestName, String roomType, int roomsRequested) {
         this.guestName = guestName;
         this.roomType = roomType;
-        this.numberOfRooms = numberOfRooms;
+        this.roomsRequested = roomsRequested;
     }
 
-    public String getGuestName() {
-        return guestName;
+    public String getGuestName() { return guestName; }
+    public String getRoomType() { return roomType; }
+    public int getRoomsRequested() { return roomsRequested; }
+}
+
+// Inventory Service
+class RoomInventory {
+    private Map<String, Integer> inventory = new HashMap<>();
+
+    public void addRoomType(String type, int count) {
+        inventory.put(type, count);
     }
 
-    public String getRoomType() {
-        return roomType;
+    public int getAvailability(String type) {
+        return inventory.getOrDefault(type, 0);
     }
 
-    public int getNumberOfRooms() {
-        return numberOfRooms;
+    public void reduceRoom(String type, int count) {
+        inventory.put(type, inventory.get(type) - count);
     }
 
-    public void display() {
-        System.out.println("Guest: " + guestName +
-                " | Room Type: " + roomType +
-                " | Rooms Requested: " + numberOfRooms);
+    public void displayInventory() {
+        System.out.println("\n--- Current Inventory ---");
+        for (String type : inventory.keySet()) {
+            System.out.println(type + " : " + inventory.get(type));
+        }
     }
 }
 
-// Booking Request Queue (FIFO)
+// Booking Queue (FIFO)
 class BookingRequestQueue {
+    private Queue<Reservation> queue = new LinkedList<>();
 
-    private Queue<Reservation> queue;
-
-    public BookingRequestQueue() {
-        queue = new LinkedList<>();
+    public void addRequest(Reservation r) {
+        queue.offer(r);
+        System.out.println("✅ Request added for " + r.getGuestName());
     }
 
-    // Add request
-    public void addRequest(Reservation reservation) {
-        queue.offer(reservation);
-        System.out.println("✅ Request added for " + reservation.getGuestName());
+    public Reservation getNextRequest() {
+        return queue.poll(); // dequeue
     }
 
-    // View all requests
-    public void viewRequests() {
-        System.out.println("\n=== Booking Requests Queue ===");
+    public boolean isEmpty() {
+        return queue.isEmpty();
+    }
+}
 
-        if (queue.isEmpty()) {
-            System.out.println("No pending requests.");
-            return;
+// Booking Service (Allocation Logic)
+class BookingService {
+
+    private Set<String> allocatedRoomIds = new HashSet<>();
+    private Map<String, Set<String>> roomTypeToIds = new HashMap<>();
+
+    // Process queue and allocate rooms
+    public void processBookings(BookingRequestQueue queue, RoomInventory inventory) {
+
+        while (!queue.isEmpty()) {
+
+            Reservation r = queue.getNextRequest();
+
+            String type = r.getRoomType();
+            int requested = r.getRoomsRequested();
+
+            System.out.println("\nProcessing request for " + r.getGuestName());
+
+            int available = inventory.getAvailability(type);
+
+            if (available >= requested) {
+
+                Set<String> allocatedSet = roomTypeToIds.getOrDefault(type, new HashSet<>());
+
+                for (int i = 0; i < requested; i++) {
+
+                    String roomId;
+
+                    // Generate unique room ID
+                    do {
+                        roomId = type.substring(0, 1).toUpperCase() + (100 + new Random().nextInt(900));
+                    } while (allocatedRoomIds.contains(roomId));
+
+                    // Store unique ID
+                    allocatedRoomIds.add(roomId);
+                    allocatedSet.add(roomId);
+
+                    System.out.println("Allocated Room ID: " + roomId);
+                }
+
+                // Update mappings
+                roomTypeToIds.put(type, allocatedSet);
+
+                // Update inventory immediately
+                inventory.reduceRoom(type, requested);
+
+                System.out.println("✅ Booking CONFIRMED for " + r.getGuestName());
+
+            } else {
+                System.out.println("❌ Booking FAILED for " + r.getGuestName() +
+                        " (Not enough rooms)");
+            }
         }
-
-        for (Reservation r : queue) {
-            r.display();
-        }
     }
 
-    // Peek next request (FIFO)
-    public void peekNextRequest() {
-        System.out.println("\nNext Request (FIFO):");
-
-        Reservation r = queue.peek();
-
-        if (r == null) {
-            System.out.println("No requests in queue.");
-        } else {
-            r.display();
+    // Display allocated rooms
+    public void displayAllocations() {
+        System.out.println("\n=== Room Allocations ===");
+        for (String type : roomTypeToIds.keySet()) {
+            System.out.println(type + " -> " + roomTypeToIds.get(type));
         }
     }
 }
 
-// MAIN CLASS (UPDATED NAME)
+// MAIN CLASS
 public class BookMystay {
 
     public static void main(String[] args) {
 
-        Scanner scanner = new Scanner(System.in);
-        BookingRequestQueue requestQueue = new BookingRequestQueue();
+        Scanner sc = new Scanner(System.in);
+
+        RoomInventory inventory = new RoomInventory();
+        BookingRequestQueue queue = new BookingRequestQueue();
+        BookingService service = new BookingService();
+
+        // Initialize inventory
+        inventory.addRoomType("Single", 3);
+        inventory.addRoomType("Double", 2);
+        inventory.addRoomType("Suite", 1);
 
         int choice;
 
         do {
-            System.out.println("\n===== Book My Stay - Booking Requests =====");
+            System.out.println("\n===== Book My Stay =====");
             System.out.println("1. Add Booking Request");
-            System.out.println("2. View All Requests");
-            System.out.println("3. View Next Request (FIFO)");
-            System.out.println("4. Exit");
+            System.out.println("2. Process Bookings");
+            System.out.println("3. View Inventory");
+            System.out.println("4. View Allocations");
+            System.out.println("5. Exit");
             System.out.print("Enter choice: ");
 
-            choice = scanner.nextInt();
-            scanner.nextLine(); // consume newline
+            choice = sc.nextInt();
+            sc.nextLine();
 
             switch (choice) {
 
                 case 1:
-                    System.out.print("Enter Guest Name: ");
-                    String name = scanner.nextLine();
+                    System.out.print("Guest Name: ");
+                    String name = sc.nextLine();
 
-                    System.out.print("Enter Room Type: ");
-                    String roomType = scanner.nextLine();
+                    System.out.print("Room Type: ");
+                    String type = sc.nextLine();
 
-                    System.out.print("Enter Number of Rooms: ");
-                    int count = scanner.nextInt();
+                    System.out.print("Rooms Required: ");
+                    int count = sc.nextInt();
 
-                    Reservation reservation = new Reservation(name, roomType, count);
-                    requestQueue.addRequest(reservation);
+                    queue.addRequest(new Reservation(name, type, count));
                     break;
 
                 case 2:
-                    requestQueue.viewRequests();
+                    service.processBookings(queue, inventory);
                     break;
 
                 case 3:
-                    requestQueue.peekNextRequest();
+                    inventory.displayInventory();
                     break;
 
                 case 4:
-                    System.out.println("Exiting... Thank you!");
+                    service.displayAllocations();
+                    break;
+
+                case 5:
+                    System.out.println("Exiting...");
                     break;
 
                 default:
                     System.out.println("Invalid choice.");
             }
 
-        } while (choice != 4);
+        } while (choice != 5);
 
-        scanner.close();
+        sc.close();
     }
 }
