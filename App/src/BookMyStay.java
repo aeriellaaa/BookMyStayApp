@@ -1,68 +1,114 @@
-abstract class Room {
-    protected String type;
-    protected int beds;
-    protected double price;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
 
-    public Room(String type, int beds, double price) {
-        this.type = type;
-        this.beds = beds;
-        this.price = price;
+public class BookMyStay {
+
+    // Inner class for centralized inventory management
+    static class RoomInventory {
+
+        private Map<String, Integer> inventory;
+
+        // Constructor
+        public RoomInventory() {
+            inventory = new HashMap<>();
+        }
+
+        // Add room type
+        public void addRoomType(String roomType, int count) {
+            inventory.put(roomType, count);
+        }
+
+        // Get availability
+        public int getAvailability(String roomType) {
+            return inventory.getOrDefault(roomType, 0);
+        }
+
+        // Update availability
+        public void updateAvailability(String roomType, int change) {
+            int current = inventory.getOrDefault(roomType, 0);
+            int updated = current + change;
+
+            if (updated < 0) {
+                System.out.println("❌ Not enough rooms available for " + roomType);
+                return;
+            }
+
+            inventory.put(roomType, updated);
+            System.out.println("✅ Updated " + roomType + " rooms. Current: " + updated);
+        }
+
+        // Display inventory
+        public void displayInventory() {
+            System.out.println("\n--- Current Room Inventory ---");
+            for (Map.Entry<String, Integer> entry : inventory.entrySet()) {
+                System.out.println(entry.getKey() + " : " + entry.getValue());
+            }
+        }
     }
 
-    public void displayDetails() {
-        System.out.println("Room Type: " + type);
-        System.out.println("Beds: " + beds);
-        System.out.println("Price per night: $" + price);
-    }
-}
-
-// Single Room
-class SingleRoom extends Room {
-    public SingleRoom() {
-        super("Single Room", 1, 100.0);
-    }
-}
-
-// Double Room
-class DoubleRoom extends Room {
-    public DoubleRoom() {
-        super("Double Room", 2, 180.0);
-    }
-}
-
-// Suite Room
-class SuiteRoom extends Room {
-    public SuiteRoom() {
-        super("Suite Room", 3, 300.0);
-    }
-}
-
-// Main Application
-                                                                                                                                                                                                                                                                                                                  public class BookMyStay {
-
+    // Main method
     public static void main(String[] args) {
 
-        System.out.println("Welcome to Book My Stay App");
-        System.out.println("Hotel Booking System v2.0\n");
+        Scanner scanner = new Scanner(System.in);
 
-        // Initialize rooms
-        Room single = new SingleRoom();
-        Room doubleRoom = new DoubleRoom();
-        Room suite = new SuiteRoom();
+        // Initialize inventory
+        RoomInventory inventory = new RoomInventory();
 
-        // Static availability
-        int singleAvailable = 5;
-        int doubleAvailable = 3;
-        int suiteAvailable = 2;
+        // Preload room types
+        inventory.addRoomType("Single", 10);
+        inventory.addRoomType("Double", 5);
+        inventory.addRoomType("Suite", 2);
 
-        // Display details
-        single.displayDetails();
-        System.out.println("Available: " + singleAvailable + "\n");
+        int choice;
 
-        doubleRoom.displayDetails();
-        System.out.println("Available: " + doubleAvailable + "\n");
+        do {
+            System.out.println("\n===== Book My Stay =====");
+            System.out.println("1. View Room Availability");
+            System.out.println("2. Book Room");
+            System.out.println("3. Cancel Booking");
+            System.out.println("4. Exit");
+            System.out.print("Enter choice: ");
 
-        suite.displayDetails();
-        System.out.println("Available: " + suiteAvailable);
+            choice = scanner.nextInt();
+            scanner.nextLine(); // consume newline
+
+            switch (choice) {
+
+                case 1:
+                    inventory.displayInventory();
+                    break;
+
+                case 2:
+                    System.out.print("Enter room type to book: ");
+                    String bookType = scanner.nextLine();
+
+                    System.out.print("Enter number of rooms: ");
+                    int bookCount = scanner.nextInt();
+
+                    inventory.updateAvailability(bookType, -bookCount);
+                    break;
+
+                case 3:
+                    System.out.print("Enter room type to cancel: ");
+                    String cancelType = scanner.nextLine();
+
+                    System.out.print("Enter number of rooms: ");
+                    int cancelCount = scanner.nextInt();
+
+                    inventory.updateAvailability(cancelType, cancelCount);
+                    break;
+
+                case 4:
+                    System.out.println("Exiting... Thank you!");
+                    break;
+
+                default:
+                    System.out.println("Invalid choice. Try again.");
+            }
+
+        } while (choice != 4);
+
+        scanner.close();
     }
 }
